@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        video { max-width: 100%; }
+        canvas { display: none; }
+        button { margin-top: 10px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h3>Image Capture with JavaScript</h3>
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+    <button id="capture">Capture Image</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const captureButton = document.getElementById('capture');
+
+            // Check if the browser supports getUserMedia
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function (stream) {
+                        video.srcObject = stream;
+                        video.play();
+                    })
+                    .catch(function (error) {
+                        console.error('Error accessing camera:', error);
+                    });
+            } else {
+                console.error('getUserMedia is not supported in this browser');
+            }
+
+            // Capture image from video stream
+            captureButton.addEventListener('click', function () {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw video frame onto the canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Get image data URL from the canvas
+                const imageDataUrl = canvas.toDataURL('image/png');
+
+                // Open the image in a new tab (optional)
+                const imageWindow = window.open();
+                imageWindow.document.write('<img src="' + imageDataUrl + '" alt="Captured Image">');
+            });
+        });
+    </script>
+</body>
+</html>

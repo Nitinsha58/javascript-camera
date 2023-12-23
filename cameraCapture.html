@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Capture API</title>
+</head>
+<body>
+    <button id="playBtn">Play stream</button>
+    <button id="stopBtn">Stop stream</button>
+    <button id="captureBtn">Capture</button>
+
+    <canvas id="canvas"></canvas>
+    <video id="player" autoplay></video>
+
+    <h1>Devices</h1>
+    <ul>
+    </ul>
+    <script>
+            async function listDevices() {
+                try {
+                    if (!navigator.mediaDevices?.enumerateDevices) {
+                        console.log("enumerateDevices() not supported.");
+                        return;
+                    }
+
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+
+                    if (devices.length === 0) {
+                        console.log("No media devices found.");
+                        return;
+                    }
+
+                    const ul = document.querySelector('ul'); // Assuming you have a <ul> element in your HTML
+
+                    devices.forEach((device) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `${device.kind}: ${device.label} (id: ${device.deviceId})`;
+                        ul.appendChild(li);
+                        console.log(`${device.kind}: ${device.label} (id: ${device.deviceId})`);
+                    });
+                } catch (error) {
+                    console.error(`Error listing devices: ${error.name} - ${error.message}`);
+                }
+            }
+
+            listDevices();
+
+
+
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const player = document.getElementById('player');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let stream;
+
+        playBtn.addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(mediaStream => {
+                    player.srcObject = mediaStream;
+                    stream = mediaStream;
+                })
+                .catch(error => console.error('Error accessing camera:', error));
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                player.srcObject = null;
+            }
+        });
+
+        captureBtn.addEventListener('click', () => {
+            if (stream) {
+                const track = stream.getVideoTracks()[0];
+                let imageCapture = new ImageCapture(track);
+                imageCapture.takePhoto()
+                    .then(blob => {
+                        const img = new Image();
+                        img.src = URL.createObjectURL(blob);
+                        img.onload = () => {
+                            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            URL.revokeObjectURL(img.src);
+                        };
+                    })
+                    .catch(error => console.error('Error taking photo:', error));
+            } else {
+                console.error('No video stream available.');
+            }
+        });
+    </script>
+</body>
+</html>

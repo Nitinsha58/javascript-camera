@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<style>
+			button {
+				margin: 5px;
+				padding: 10px 20px;
+				background-color: #007bff;
+				color: #fff;
+				border: none;
+				border-radius: 5px;
+				cursor: pointer;
+			}
+			button:hover {
+				background-color: #0056b3 ;
+			}
+			div {
+				margin-top: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<a href="cameraCapture.html">Camera</a>
+		<h3>Using the Media recorder API to record audio in the web browser</h3>
+		<div>
+			<button id="start">Start Recording</button>
+			<button id="stop">Stop Recording</button>
+			<button id="play">Play Recorded Audio</button>
+		</div>
+		<br />
+		<div id="output"></div>
+		
+		<h1>Capture and Display Image</h1>
+			<video id="video" width="640" height="480" autoplay></video>
+			<button id="capture" onclick="captureImage()">Capture</button>
+			<canvas id="canvas" width="640" height="480"></canvas>
+			<div id="display"></div>
+		<script>
+			const startButton = document.getElementById("start");
+			const stopButton = document.getElementById("stop");
+			const playButton = document.getElementById("play");
+			let output = document.getElementById("output");
+			let audioRecorder;
+			let audioChunks = [];
+
+			navigator.mediaDevices
+				.getUserMedia({ audio: true })
+				.then((stream) => {
+					audioRecorder = new MediaRecorder(stream);
+
+					audioRecorder.addEventListener("dataavailable", (e) => {
+						audioChunks.push(e.data);
+					});
+
+					startButton.addEventListener("click", () => {
+						audioChunks = [];
+						audioRecorder.start();
+						output.innerHTML = "Recording started! Speak now.";
+					});
+
+					stopButton.addEventListener("click", () => {
+						audioRecorder.stop();
+						output.innerHTML =
+							"Recording stopped! Click on the play button to play the recorded audio.";
+					});
+
+					playButton.addEventListener("click", () => {
+						const blobObj = new Blob(audioChunks, {
+							type: "audio/webm",
+						});
+						sendAudioToServer(blobObj);
+						const audioUrl = URL.createObjectURL(blobObj);
+						const audio = new Audio(audioUrl);
+						audio.play();
+
+						output.innerHTML = "Playing the recorded audio!";
+					});
+
+					function sendAudioToServer(blob) {
+						const formData = new FormData();
+						formData.append("audio", blob, "recorded_audio.webm");
+
+						fetch("/upload", {
+							method: "POST",
+							body: formData,
+						})
+							.then((response) => response.json())
+							.then((data) => {
+								console.log("Server response:", data);
+							})
+							.catch((error) => {
+								console.error(
+									"Error sending audio to server:",
+									error
+								);
+							});
+					}
+				})
+				.catch((err) => {
+					console.log("Error: " + err);
+				});
+
+
+			async function captureImage() {
+				const video = document.getElementById('video');
+				const canvas = document.createElement('canvas');
+				canvas.width = video.videoWidth;
+				canvas.height = video.videoHeight;
+				const ctx = canvas.getContext('2d');
+				ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+				const img = new Image();
+				img.src = canvas.toDataURL('image/png');
+
+				const blob = await (await fetch(img.src)).blob();
+				const file = new File([blob], 'captured_image.png', { type: 'image/png' });
+
+				const formData = new FormData();
+				formData.append('image', file);
+
+				fetch('/capture', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.json())
+				.then(data => console.log(data))
+				.catch(error => console.error(error));
+			}
+		</script>
+	</body>
+</html>
